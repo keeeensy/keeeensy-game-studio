@@ -1,0 +1,10 @@
+{
+  "required": true,
+  "package": "com.keeeensy.rpglevels.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "mixins": ["LivingEntityHurtMixin"],
+  "client": ["client.EntityRendererMixin", "client.EntityRendererDistanceMixin"],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

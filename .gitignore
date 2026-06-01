@@ -1,0 +1,55 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+
+venv/
+.venv/
+
+# C++ / CMake
+3d_maze/build/
+*.obj
+*.exe
+*.a
+*.lib
+*.dll
+cmake-build-*/
+
+# Java / Gradle
+.gradle/
+.local/
+build/
+!death_marker_mod/build/libs/*.jar
+!rpg_levels_mod/build/libs/*.jar
+*.jar
+
+# Minecraft
+minecraft_profiles/shared/*.jar
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temp files
+pdf_preview/
+portfolio.pdf
+portfolio2026.pdf
+pdftmp.txt
+pdf_text_*.txt
+pdf_text_*.json
+pdf_clean.json
+pdf_text.json
+extract_pdf.py
+decode_pdf.py
+render_pdf.py
+analyze_pdf2.py
+make_pptx.py
