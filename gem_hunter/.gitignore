@@ -5,6 +5,7 @@ __pycache__/
 
 # PyInstaller
 build/
+build_temp/
 dist/
 *.spec
 
