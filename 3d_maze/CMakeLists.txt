@@ -21,4 +21,4 @@ add_executable(maze_run_3d
 )
 target_include_directories(maze_run_3d PRIVATE src)
 target_link_libraries(maze_run_3d raylib)
-target_link_options(maze_run_3d PRIVATE -static-libgcc -static-libstdc++ -static)
+target_link_options(maze_run_3d PRIVATE -static-libgcc -static-libstdc++ -static -mwindows)

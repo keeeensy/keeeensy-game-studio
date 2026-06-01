@@ -7,7 +7,7 @@ __pycache__/
 build/
 build_temp/
 dist/
-*.spec
+# *.spec removed to track build config
 
 # IDE
 .idea/
