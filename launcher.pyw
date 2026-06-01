@@ -296,6 +296,7 @@ class Launcher:
         if os.path.exists(launcher):
             subprocess.Popen([
                 "powershell", "-NoProfile", "-ExecutionPolicy", "Bypass",
+                "-WindowStyle", "Hidden",
                 "-File", launcher, "-Profile", mp["profile"]
             ], cwd=os.path.join(BASE, "minecraft_profiles"))
 
