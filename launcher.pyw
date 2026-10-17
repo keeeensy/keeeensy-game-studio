@@ -1,11 +1,10 @@
 """Keeeensy Launcher — запуск игр и профилей Minecraft из монорепозитория.
 
 Интерфейс рисуется на tkinter Canvas. Всё «тяжёлое» (фон, скруглённые карточки,
-градиенты, иконки) рендерится через Pillow один раз и кешируется, а в цикле
-анимации обновляются только звёзды, метеоры, тосты и индикаторы запуска.
+градиенты, иконки) рендерится через Pillow один раз и кешируется. Анимаций нет: картинки
+пересобираются только при наведении, выборе и смене статуса.
 """
 import ctypes
-import math
 import os
 import random
 import subprocess
@@ -33,7 +32,6 @@ SITE_URL = "https://keeeensy.github.io/"
 
 # Логический размер окна; реальный умножается на масштаб экрана Windows
 W, H = 1100, 700
-FPS_MS = 33
 
 # Палитра как на сайте
 BG = "#0b0b12"
@@ -49,6 +47,8 @@ WARN = "#fbbf24"
 ERR = "#f87171"
 
 CREATE_NO_WINDOW = 0x08000000
+# Место под уведомление: свободная зона слева под плитками Minecraft
+TOAST_RECT = (28, 590, 344, 60)
 
 GAMES = [
     {
@@ -68,7 +68,7 @@ GAMES = [
     {
         "key": "gem3d", "name": "Gem Hunter 3D", "icon": "box",
         "tagline": "3D-лабиринт от первого лица",
-        "stack": ["C++17", "raylib", "CMake"],
+        "stack": ["C++", "raylib", "CMake"],
         "desc": "Трёхмерная версия Gem Hunter: тот же игровой цикл, но от первого лица. "
                 "Стены склеиваются в крупные меши (greedy mesh merge), звук синтезируется на лету.",
         "features": ["10 уровней — от 8×8 до 26×26", "3 типа врагов: Scout, Soldier, Brute",
@@ -149,11 +149,6 @@ def enable_dpi_awareness():
 def rgb(hexc):
     h = hexc.lstrip("#")
     return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
-
-
-def blend(c1, c2, t):
-    a, b = rgb(c1), rgb(c2)
-    return "#%02x%02x%02x" % tuple(int(a[i] + (b[i] - a[i]) * t) for i in range(3))
 
 
 class Painter:
@@ -247,8 +242,10 @@ class Painter:
         self.cache[key] = result
         return result
 
-    def background(self, w, h):
-        """Фон окна: тёмная база, цветные пятна света и сетка, затухающая к краям."""
+    def background(self, w, h, avoid=()):
+        """Фон окна: тёмная база, мягкие пятна света и неподвижные звёзды.
+        avoid — прямоугольники (x, y, w, h) карточек: там звёзды не рисуются,
+        иначе они просвечивают сквозь полупрозрачные карточки и мешают тексту."""
         pw, ph = self.px(w), self.px(h)
         q = 4  # пятна размываются на уменьшенной копии — быстро и всё равно гладко
         glow = Image.new("RGB", (pw // q, ph // q), (0, 0, 0))
@@ -260,17 +257,19 @@ class Painter:
         glow = glow.filter(ImageFilter.GaussianBlur(gw * 0.12)).resize((pw, ph), Image.BICUBIC)
         img = ImageChops.add(Image.new("RGB", (pw, ph), rgb(BG)), glow)
 
-        grid = Image.new("L", (pw, ph), 0)
-        gd = ImageDraw.Draw(grid)
-        step = self.px(48)
-        for x in range(0, pw, step):
-            gd.line((x, 0, x, ph), fill=255)
-        for y in range(0, ph, step):
-            gd.line((0, y, pw, y), fill=255)
-        fade = Image.radial_gradient("L").resize((pw, ph), Image.BILINEAR)
-        fade = ImageChops.invert(fade).point(lambda v: max(0, v - 90) * 9 // 100)
-        grid = ImageChops.multiply(grid, fade)
-        img = Image.composite(Image.new("RGB", (pw, ph), (255, 255, 255)), img, grid)
+        # Звёзды рисуются вдвое крупнее и уменьшаются — так края гладкие
+        stars = Image.new("L", (pw * 2, ph * 2), 0)
+        sd = ImageDraw.Draw(stars)
+        rnd = random.Random(7)
+        k = stars.width / w
+        for _ in range(120):
+            x, y = rnd.uniform(0, stars.width), rnd.uniform(0, stars.height)
+            if any(ax - 8 <= x / k <= ax + aw + 8 and ay - 8 <= y / k <= ay + ah + 8 for ax, ay, aw, ah in avoid):
+                continue
+            r = rnd.uniform(0.5, 1.3) * self.s * 2
+            sd.ellipse((x - r, y - r, x + r, y + r), fill=int(rnd.uniform(60, 170)))
+        stars = stars.resize((pw, ph), Image.LANCZOS)
+        img = Image.composite(Image.new("RGB", (pw, ph), (255, 255, 255)), img, stars)
         return ImageTk.PhotoImage(img)
 
 
@@ -310,10 +309,6 @@ class Launcher:
         self.hover = None
         self.procs = {}          # key -> {"proc", "start", "log"}
         self.last_log = {}       # key -> путь к последнему логу
-        self.toasts = []
-        self.t = 0.0
-        self.next_meteor = time.time() + 3
-        self.meteor = None
         self.drag = None
 
         self.cv = tk.Canvas(self.root, width=px(W), height=px(H), bg=BG, highlightthickness=0)
@@ -324,7 +319,6 @@ class Launcher:
         self.draw_detail()
         self.bind_keys()
         self.root.after(30, self.show_in_taskbar)
-        self.root.after(FPS_MS, self.tick)
         self.root.after(600, self.watch_processes)
         self.root.mainloop()
 
@@ -376,15 +370,11 @@ class Launcher:
 
     def build_static(self):
         px, cv = self.p.px, self.cv
-        self.bg_img = self.p.background(W, H)
+        avoid = [self.tile_rect(i) for i in range(len(self.items))]
+        avoid += [(396, 84, 676, 588), TOAST_RECT, (20, 14, 340, 46), (836, 14, 260, 46), (20, 640, 340, 40)]
+        self.bg_img = self.p.background(W, H, avoid)
         cv.create_image(0, 0, image=self.bg_img, anchor="nw", tags=("bg",))
 
-        self.stars = []
-        for _ in range(70):
-            x, y = random.uniform(0, px(W)), random.uniform(0, px(H))
-            r = random.uniform(0.6, 1.5) * self.s
-            item = cv.create_oval(x - r, y - r, x + r, y + r, fill=BG, outline="", tags=("bg", "star"))
-            self.stars.append((item, random.uniform(0.15, 0.55), random.uniform(0.6, 2.2), random.uniform(0, 6.3)))
 
         cv.tag_bind("bg", "<ButtonPress-1>", self.on_press)
         cv.tag_bind("bg", "<B1-Motion>", self.on_drag)
@@ -456,10 +446,8 @@ class Launcher:
             else:
                 cv.create_text(px(tx), px(y + 23), text=it["name"], fill=TEXT, font=self.f["hs"], anchor="w", tags=tags)
                 cv.create_text(px(tx), px(y + 43), text=it["sub"], fill=MUTED, font=self.f["xs"], anchor="w", tags=tags)
-            r = 4
             dx, dy = x + w - 18, (y + h / 2) if game else (y + 12)
-            self.tile_dot[i] = cv.create_oval(px(dx - r), px(dy - r), px(dx + r), px(dy + r), outline="",
-                                              fill=self.status_color(i), tags=tags)
+            self.tile_dot[i] = cv.create_image(px(dx), px(dy), image=self.dot(self.status_color(i), 8), tags=tags)
             if not game:
                 # У профилей Minecraft нет статуса сборки — точка видна только во время запуска
                 cv.itemconfig(self.tile_dot[i], state="hidden")
@@ -503,6 +491,10 @@ class Launcher:
             return "warn", "exe не собран — запуск из исходников", f"python {it['source']} · нужен pygame"
         return "err", "Не собрано", it["build"]
 
+    def dot(self, color, size):
+        img, _ = self.p.shape(size, size, size / 2, rgb(color) + (255,))
+        return img
+
     def status_color(self, i):
         return {"ok": OK, "warn": WARN, "err": ERR, "run": VIOLET}[self.status(self.items[i])[0]]
 
@@ -540,7 +532,7 @@ class Launcher:
         cv.create_text(px(x0), px(326), text="ВОЗМОЖНОСТИ", fill=DIM, font=self.f["label"], anchor="nw", tags=tags)
         for k, feat in enumerate(it["features"]):
             y = 356 + k * 30
-            cv.create_oval(px(x0 + 1), px(y + 6), px(x0 + 7), px(y + 12), fill=VIOLET, outline="", tags=tags)
+            cv.create_image(px(x0 + 4), px(y + 10), image=self.dot(VIOLET, 6), tags=tags)
             cv.create_text(px(x0 + 20), px(y), text=feat, fill=TEXT, font=self.f["body"], anchor="nw", tags=tags)
 
         hint_icon = it.get("hint_icon", "puzzle")
@@ -640,7 +632,7 @@ class Launcher:
             self.toast(it["name"], "Уже запущено", kind="info")
             return
         if kind == "err":
-            self.toast(f"{it['name']} не собран", detail, kind="err")
+            self.toast("Не собрано", it["name"], kind="err")
             return
 
         os.makedirs(LOGS, exist_ok=True)
@@ -649,7 +641,7 @@ class Launcher:
             script = os.path.join(BASE, "minecraft_profiles", "launch_fabric.ps1")
             cmd = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script, "-Profile", it["key"]]
             cwd = os.path.dirname(script)
-            message = "Minecraft запускается — это может занять до минуты"
+            message = "Minecraft запускается, это до минуты"
         elif kind == "ok":
             exe = os.path.join(BASE, it["exe"])
             cmd, cwd = [exe], os.path.dirname(exe)
@@ -666,7 +658,7 @@ class Launcher:
                 proc = subprocess.Popen(cmd, cwd=cwd, stdout=log, stderr=subprocess.STDOUT,
                                         stdin=subprocess.DEVNULL, creationflags=CREATE_NO_WINDOW)
         except OSError as err:
-            self.toast(f"Не удалось запустить {it['name']}", str(err), kind="err")
+            self.toast("Не удалось запустить", str(err)[:48], kind="err")
             return
 
         self.procs[it["key"]] = {"proc": proc, "start": time.time(), "log": log_path, "item": it}
@@ -684,8 +676,8 @@ class Launcher:
             lived = time.time() - info["start"]
             if code != 0 and lived < 30:
                 log = info["log"]
-                self.toast(f"{info['item']['name']} завершился с ошибкой",
-                           f"Код {code}. Нажми, чтобы открыть лог", kind="err", action=lambda: os.startfile(log))
+                self.toast("Ошибка запуска", f"{info['item']['name']}: код {code}. Нажми — откроется лог",
+                           kind="err", action=lambda: os.startfile(log))
             self.refresh_status(key)
         self.root.after(600, self.watch_processes)
 
@@ -693,105 +685,32 @@ class Launcher:
         for i, it in enumerate(self.items):
             if it["key"] == key:
                 state = "normal" if it["kind"] == "game" or key in self.procs else "hidden"
-                self.cv.itemconfig(self.tile_dot[i], fill=self.status_color(i), state=state)
+                self.cv.itemconfig(self.tile_dot[i], image=self.dot(self.status_color(i), 8), state=state)
                 if i == self.selected:
                     self.draw_detail()
 
     # ---------- тосты ----------
 
     def toast(self, title, body, kind="info", action=None):
+        """Одно уведомление за раз в свободной зоне слева; новое заменяет старое."""
         px, cv = self.p.px, self.cv
-        tid = f"toast{time.time_ns()}"
-        w, h = 360, 64
-        img, _ = self.p.shape(w, h, 14, (22, 22, 34, 248), border=(255, 255, 255, 26))
+        cv.delete("toast")
+        self.toast_id = tid = f"toast{time.time_ns()}"
+        x, y, w, h = TOAST_RECT
+        img, _ = self.p.shape(w, h, 14, (22, 22, 34, 250), border=(255, 255, 255, 26))
         color = {"ok": OK, "err": ERR, "info": VIOLET_L}[kind]
         icon = {"ok": "circle-check", "err": "triangle-alert", "info": "sparkles"}[kind]
         tags = ("toast", tid)
-        cv.create_image(0, 0, image=img, anchor="nw", tags=tags)
-        cv.create_image(px(26), px(h / 2), image=self.p.icon(icon, 20, color), tags=tags)
-        cv.create_text(px(48), px(22), text=title, fill=TEXT, font=self.f["hs"], anchor="w", tags=tags)
-        cv.create_text(px(48), px(43), text=body, fill=MUTED, font=self.f["xs"], anchor="w",
-                       width=px(w - 60), tags=tags)
+        cv.create_image(px(x), px(y), image=img, anchor="nw", tags=tags)
+        cv.create_image(px(x + 26), px(y + h / 2), image=self.p.icon(icon, 20, color), tags=tags)
+        cv.create_text(px(x + 48), px(y + 20), text=title, fill=TEXT, font=self.f["hs"], anchor="w", tags=tags)
+        cv.create_text(px(x + 48), px(y + 40), text=body, fill=MUTED, font=self.f["xs"], anchor="w", tags=tags)
         if action:
             cv.tag_bind(tid, "<Button-1>", lambda e: action())
             cv.tag_bind(tid, "<Enter>", lambda e: cv.config(cursor="hand2"))
             cv.tag_bind(tid, "<Leave>", lambda e: cv.config(cursor=""))
-        # стартуем за правым краем, дальше выезжает в tick()
-        cv.move(tid, px(W + 10), px(76))
-        self.toasts.append({"tag": tid, "born": time.time(), "w": w, "h": h, "x": W + 10, "y": 76})
-        self.layout_toasts()
-
-    def layout_toasts(self):
-        y = 76
-        for t in self.toasts:
-            t["ty"] = y
-            y += t["h"] + 10
-
-    def update_toasts(self):
-        now = time.time()
-        for t in list(self.toasts):
-            life = now - t["born"]
-            target_x = W - 28 - t["w"] if life < 5 else W + 10
-            nx = t["x"] + (target_x - t["x"]) * 0.25
-            ny = t["y"] + (t["ty"] - t["y"]) * 0.25
-            self.cv.move(t["tag"], self.p.px(nx) - self.p.px(t["x"]), self.p.px(ny) - self.p.px(t["y"]))
-            t["x"], t["y"] = nx, ny
-            if life > 5.6:
-                self.cv.delete(t["tag"])
-                self.toasts.remove(t)
-                self.layout_toasts()
-        self.cv.tag_raise("toast")
-
-    # ---------- анимация ----------
-
-    def tick(self):
-        self.t += FPS_MS / 1000
-        for n, (item, base, speed, phase) in enumerate(self.stars):
-            if n % 2 == int(self.t * 30) % 2:
-                v = base * (0.55 + 0.45 * math.sin(self.t * speed + phase))
-                self.cv.itemconfig(item, fill=blend(BG, "#ffffff", v))
-
-        pulse = 0.5 + 0.5 * math.sin(self.t * 5)
-        for i, it in enumerate(self.items):
-            if it["key"] in self.procs:
-                self.cv.itemconfig(self.tile_dot[i], fill=blend(DIM, VIOLET_L, pulse))
-
-        self.update_meteor()
-        if self.toasts:
-            self.update_toasts()
-        self.root.after(FPS_MS, self.tick)
-
-    def update_meteor(self):
-        """Редкий метеор по фону — как на сайте."""
-        px, cv = self.p.px, self.cv
-        now = time.time()
-        if self.meteor is None and now >= self.next_meteor:
-            angle = math.radians(random.uniform(25, 38))
-            self.meteor = {"x": random.uniform(W * 0.35, W * 1.05), "y": random.uniform(-20, H * 0.3),
-                           "vx": -math.cos(angle) * 11, "vy": math.sin(angle) * 11, "life": 0, "max": 42}
-        cv.delete("meteor")
-        if self.meteor is None:
-            return
-        m = self.meteor
-        m["life"] += 1
-        m["x"] += m["vx"]
-        m["y"] += m["vy"]
-        t = m["life"] / m["max"]
-        alpha = t / 0.2 if t < 0.2 else 1 - (t - 0.2) / 0.8
-        segs = 8
-        for k in range(segs):
-            a = 1 - k / segs
-            x1, y1 = m["x"] - m["vx"] * k * 1.6, m["y"] - m["vy"] * k * 1.6
-            x2, y2 = m["x"] - m["vx"] * (k + 1) * 1.6, m["y"] - m["vy"] * (k + 1) * 1.6
-            col = blend(BG, blend(VIOLET_L, "#ffffff", a), max(0.0, alpha * a))
-            cv.create_line(px(x1), px(y1), px(x2), px(y2), fill=col, width=max(1, px(1.6)),
-                           capstyle="round", tags=("meteor",))
-        cv.tag_lower("meteor", "ui")
-        cv.tag_raise("meteor", "bg")
-        if m["life"] >= m["max"]:
-            self.meteor = None
-            cv.delete("meteor")
-            self.next_meteor = now + random.uniform(5, 10)
+        cv.tag_raise("toast")
+        self.root.after(6000, lambda: self.toast_id == tid and cv.delete("toast"))
 
 
 if __name__ == "__main__":
