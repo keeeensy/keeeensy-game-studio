@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Keeeensy Launcher</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <div class="bg" aria-hidden="true"></div>
+
+  <!-- ШАПКА: за неё окно перетаскивается -->
+  <header class="titlebar pywebview-drag-region">
+    <div class="brand">
+      <span class="badge"><span class="badge-star">✦</span> KEEEENSY</span>
+      <span class="wordmark">Launcher</span>
+    </div>
+    <div class="window-actions">
+      <button class="link" id="siteBtn" type="button">keeeensy.github.io</button>
+      <button class="win-btn" id="minBtn" type="button" aria-label="Свернуть"><span class="ic" style="--ic:url(icons/minus.svg)"></span></button>
+      <button class="win-btn close" id="closeBtn" type="button" aria-label="Закрыть"><span class="ic" style="--ic:url(icons/x.svg)"></span></button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- СПИСОК ПРОЕКТОВ -->
+    <nav class="sidebar" aria-label="Проекты">
+      <div class="section-label">Игры</div>
+      <div class="tiles games" id="games"></div>
+
+      <div class="section-label">Minecraft · Fabric</div>
+      <div class="tiles profiles" id="profiles"></div>
+
+      <div class="toast-slot" id="toastSlot" aria-live="polite"></div>
+
+      <div class="keys">
+        <span><kbd>↑</kbd><kbd>↓</kbd> выбор</span>
+        <span><kbd>Enter</kbd> запуск</span>
+        <span><kbd>Esc</kbd> выход</span>
+      </div>
+    </nav>
+
+    <!-- ПОДРОБНОСТИ ВЫБРАННОГО -->
+    <section class="panel">
+      <div class="detail" id="detail"></div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
