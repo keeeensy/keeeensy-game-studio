@@ -1,100 +1,245 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/status-active-brightgreen" alt="Status">
-  <img src="https://img.shields.io/badge/games-3-blue" alt="Games">
-  <img src="https://img.shields.io/badge/minecraft%20mods-2-purple" alt="Mods">
-  <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
+  <img src="assets/banner.png" alt="Keeeensy Game Studio — 3 игры, 2 мода для Minecraft, единый лаунчер" width="100%">
 </p>
 
-<h1 align="center">🎮 Keeeensy Game Studio</h1>
-<p align="center"><i>Монорепозиторий инди-игр, инструментов и Minecraft-модов от KEEEENSY</i></p>
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.11+-a78bfa?style=flat-square&logo=python&logoColor=white" alt="Python 3.11+">
+  <img src="https://img.shields.io/badge/C++-17-a78bfa?style=flat-square&logo=cplusplus&logoColor=white" alt="C++17">
+  <img src="https://img.shields.io/badge/Java-25-ff8a65?style=flat-square&logo=openjdk&logoColor=white" alt="Java 25">
+  <img src="https://img.shields.io/badge/PowerShell-5.1-ff8a65?style=flat-square&logo=powershell&logoColor=white" alt="PowerShell 5.1">
+  <img src="https://img.shields.io/badge/Windows-10+-8888a0?style=flat-square&logo=windows&logoColor=white" alt="Windows 10+">
+</p>
+
+<p align="center">
+  <b>Монорепозиторий инди-игр и модов для Minecraft.</b><br>
+  Вся графика и звук в играх генерируются кодом — без единого внешнего ассета.
+</p>
+
+<p align="center">
+  <a href="#проекты">Проекты</a> ·
+  <a href="#игры">Игры</a> ·
+  <a href="#моды-для-minecraft">Моды</a> ·
+  <a href="#лаунчеры">Лаунчеры</a> ·
+  <a href="#быстрый-старт">Быстрый старт</a> ·
+  <a href="#структура">Структура</a>
+</p>
 
 ---
 
-В этом репозитории собраны личные проекты: три игры (2D, 3D и survival), два мода для Minecraft Fabric и единый лаунчер, объединяющий всё вместе.
+## Проекты
 
-## 🚀 Быстрый старт
+| Проект | Что это | Стек |
+|---|---|---|
+| [**Gem Hunter 2D**](gem_hunter/) | Процедурный dungeon crawler: 15 уровней, враги, ачивки, редактор уровней | Python · Pygame |
+| [**Gem Hunter 3D**](3d_maze/) | 3D-лабиринт от первого лица: 10 уровней, 3 типа врагов, миникарта | C++17 · raylib · CMake |
+| [**Zombie Survival**](zombie_survival/) | Волновой survival-шутер: 4 типа зомби, апгрейды, бесконечные волны | Python · Pygame |
+| [**RPG Levels**](rpg_levels_mod/) | Мод: уровни монстров 1–100, масштабирование урона, XP за убийство | Java · Fabric |
+| [**Death Marker**](death_marker_mod/) | Мод: вечный Soul Torch на месте смерти игрока | Java · Fabric |
+| [**Лаунчер**](launcher.pyw) | GUI для запуска всех игр и профилей Minecraft | Python · tkinter |
+| [**Minecraft Profiles**](minecraft_profiles/) | Переключение наборов модов Fabric одной командой | PowerShell |
 
-Запусти единый лаунчер:
+К каждой игре и моду есть свой README и дизайн-документ (`GDD.md`).
+
+---
+
+## Игры
+
+### Gem Hunter 2D
+
+Собери все сферы на уровне, чтобы открыть выход, и не попадись врагам.
+
+- **Процедурные подземелья** — лабиринты от 10×10 до 24×24, связность каждого уровня проверяется BFS
+- **4 типа врагов** — сложность растёт вместе с плотностью стен, числом врагов и сфер
+- **Редактор уровней** — 5 кистей, зум и панорамирование, сохранение в JSON
+- **4 ачивки** — Speedrunner, Collector, Survivor, Explorer
+- **Без ассетов** — графика из примитивов Pygame, звук синтезируется в WAV
+
+<details>
+<summary><b>Управление и запуск</b></summary>
+
+| Клавиша | Действие |
+|---|---|
+| WASD / стрелки | Движение |
+| Shift | Спринт (×1.6) |
+| Esc | Пауза |
+| Enter | Пропустить интро уровня |
+
+```bash
+cd gem_hunter
+pip install pygame
+python main.py
+```
+
+Сборка exe: `python -m PyInstaller gem_hunter.spec` → `dist/gem_hunter.exe`
+</details>
+
+### Gem Hunter 3D
+
+Трёхмерная версия Gem Hunter 2D на C++ и raylib — тот же игровой цикл, но от первого лица.
+
+- **10 процедурных уровней** — от 8×8 до 26×26
+- **3 типа врагов** — Scout (быстрый), Soldier (сбалансированный), Brute (медленный и живучий)
+- **Миникарта** с исследованными зонами, сферами и выходом
+- **Greedy mesh merge** — стены склеиваются в крупные меши ради производительности
+- **Процедурный звук** и настройки громкости и чувствительности мыши
+
+<details>
+<summary><b>Управление и сборка</b></summary>
+
+| Клавиша | Действие |
+|---|---|
+| WASD / стрелки | Движение |
+| Shift | Спринт (×1.7) |
+| Мышь | Обзор |
+| Esc | В меню |
+| Enter | Пропустить интро / подтвердить |
+
+Нужны CMake 3.15+ и MinGW g++. raylib CMake скачает сам.
+
+```bash
+cd 3d_maze
+cmake -B build -G "MinGW Makefiles"
+cmake --build build
+```
+
+Или просто `build.bat` — готовый `maze_run_3d.exe` появится в папке `3d_maze`.
+</details>
+
+### Zombie Survival
+
+Держи оборону против бесконечных волн зомби и прокачивайся между волнами.
+
+- **4 типа врагов** — Normal, Fast, Tank, Spitter открываются по ходу волн
+- **Апгрейды** — после каждой волны выбор: урон, скорострельность, скорость или Max HP
+- **Процедурный звук** — без внешних аудиофайлов
+
+<details>
+<summary><b>Управление и запуск</b></summary>
+
+| Клавиша | Действие |
+|---|---|
+| W / S, ↑ / ↓ | Движение вверх и вниз |
+| ЛКМ | Выстрел в сторону курсора |
+| Esc | Пауза |
+| Q | Выход в меню (на паузе) |
+
+```bash
+cd zombie_survival
+pip install pygame
+python main.py
+```
+
+Сборка exe:
+
+```bash
+pyinstaller zombie_survival.spec
+xcopy /E /I sprites dist\zombie_survival\sprites
+```
+</details>
+
+---
+
+## Моды для Minecraft
+
+Оба мода работают на **Minecraft 26.1.2**, Fabric Loader **0.19.2** и Fabric API **0.149.1+26.1.2**.
+
+| Мод | Что делает | Как устроен |
+|---|---|---|
+| [**RPG Levels**](rpg_levels_mod/) | Монстры получают уровень 1–100 и цветной ник `Lvl X Zombie`. Урон масштабируется в обе стороны, за убийство — `level × 10` XP. Уровень моба видно до 256 блоков. | 3 миксина, данные синхронизируются через ванильный `customName` — без своих пакетов |
+| [**Death Marker**](death_marker_mod/) | При смерти ставит вечный Soul Torch на месте гибели. Ищет подходящее место в области 3×3×2 — работает в воде, лаве и в воздухе. | Только события Fabric API, без миксинов, работает на сервере |
+
+<details>
+<summary><b>Сборка и установка</b></summary>
+
+Нужен JDK 25.
+
+```powershell
+cd rpg_levels_mod        # или death_marker_mod
+.\gradlew build
+```
+
+Готовый `.jar` появится в `build/libs/`. Скопируй его в папку `mods/` своего Fabric-профиля вместе с Fabric API.
+</details>
+
+---
+
+## Лаунчеры
+
+### Единый лаунчер — [`launcher.pyw`](launcher.pyw)
+
+Окно на tkinter, из которого запускаются все три игры и четыре профиля Minecraft. Анимированный градиентный фон, частицы, ховер-эффекты, сворачиваемый раздел Minecraft.
 
 ```bash
 launcher.bat
 ```
 
-Или запускай проекты по отдельности (см. поддиректории).
+> Лаунчер запускает собранные `.exe`, поэтому сначала собери игры (см. разделы выше).
 
-## 📂 Проекты
+### Minecraft Profiles — [`minecraft_profiles/`](minecraft_profiles/)
 
-<table>
-  <tr>
-    <th>Проект</th>
-    <th>Стек</th>
-    <th>Описание</th>
-  </tr>
-  <tr>
-    <td><b>💎 <a href="gem_hunter/">Gem Hunter 2D</a></b></td>
-    <td>Python + Pygame</td>
-    <td>Процедурный 2D dungeon crawler. 15 уровней, враги, ачивки, встроенный редактор уровней. Вся графика и звук генерируются процедурно.</td>
-  </tr>
-  <tr>
-    <td><b>🧊 <a href="3d_maze/">Gem Hunter 3D</a></b></td>
-    <td>C++17 + raylib</td>
-    <td>3D лабиринт от первого лица. 10 уровней, 3 типа врагов, миникарта, greedy mesh merge, процедурный звук.</td>
-  </tr>
-  <tr>
-    <td><b>🧟 <a href="zombie_survival/">Zombie Survival</a></b></td>
-    <td>Python + Pygame</td>
-    <td>2D волновой survival-шутер. 4 типа зомби, система апгрейдов, бесконечные волны, процедурный звук.</td>
-  </tr>
-  <tr>
-    <td><b>⚔️ <a href="rpg_levels_mod/">RPG Levels Mod</a></b></td>
-    <td>Java + Fabric</td>
-    <td>Мод для Minecraft Fabric. Назначает уровни монстрам, масштабирует урон, даёт XP за убийство.</td>
-  </tr>
-  <tr>
-    <td><b>☠️ <a href="death_marker_mod/">Death Marker Mod</a></b></td>
-    <td>Java + Fabric</td>
-    <td>Мод для Minecraft Fabric. Ставит вечный Soul Torch на месте смерти.</td>
-  </tr>
-  <tr>
-    <td><b>⚡ <a href="minecraft_profiles/">Minecraft Profiles</a></b></td>
-    <td>PowerShell</td>
-    <td>Профильный лаунчер Fabric. Управляет модами для 4 профилей (vanilla, RPG, Death Marker, All).</td>
-  </tr>
-</table>
+PowerShell-скрипт, который перед запуском Minecraft подставляет нужный набор модов в `.minecraft/mods`, запускает игру и после выхода возвращает исходные моды на место.
 
-## 🎯 Обзор игр
+| Профиль | Моды | Быстрый запуск |
+|---|---|---|
+| `vanilla` | Чистый Fabric | `minecraft_vanilla.bat` |
+| `rpg_levels` | Fabric API + RPG Levels | `minecraft_rpg_mod.bat` |
+| `death_marker` | Fabric API + Death Marker | `minecraft_death_marker_mod.bat` |
+| `all_mods` | Fabric API + оба мода | `minecraft_all_mods.bat` |
 
-### Gem Hunter 2D
-Процедурный dungeon crawler с 15 уровнями возрастающей сложности. Собирай магические сферы, избегай врагов, открывай выход. Полноценный редактор уровней с 5 кистями, система ачивок, полностью процедурная графика и звук — без внешних ресурсов.
+```powershell
+.\minecraft_profiles\launch_fabric.ps1 -Profile rpg_levels
+```
 
-### Gem Hunter 3D
-3D-версия на C++17 и raylib. Процедурные 3D-лабиринты с greedy mesh merge, 3 типа врагов, миникарта, звук синтезируется на лету. 10 уровней от 8×8 до 26×26.
+---
 
-### Zombie Survival
-Бесконечный волновый survival-шутер. 4 типа врагов (Normal, Fast, Tank, Spitter) открываются по ходу волн. Выбирай апгрейды после каждой волны (урон, скорострельность, скорость, HP). Весь звук синтезируется процедурно.
+## Быстрый старт
 
-## 🧩 Minecraft-моды
+```bash
+git clone https://github.com/keeeensy/keeeensy-game-studio.git
+cd keeeensy-game-studio
+pip install pygame
+python gem_hunter/main.py
+```
 
-Оба мода для Minecraft 26.1.2 с Fabric Loader 0.19.2 и Fabric API 0.149.1+26.1.2.
+Остальные проекты запускаются и собираются по инструкциям в их разделах выше.
 
-| Мод | События/Миксины | Описание |
-|-----|-----------------|----------|
-| RPG Levels | 3 миксина | Отображение уровня, масштабирование урона, XP за убийство, ники на большом расстоянии |
-| Death Marker | Fabric API event | Ставит Soul Torch на месте смерти, вечный, на основе блока |
+<details>
+<summary><b>Системные требования</b></summary>
 
-## 🖥️ Системные требования
+| Компонент | Версия | Для чего |
+|---|---|---|
+| Windows | 10+ | Все проекты |
+| Python | 3.11+ | Python-игры и лаунчер |
+| Pygame | 2.6+ | Gem Hunter 2D, Zombie Survival |
+| CMake + MinGW g++ | 3.15+ | Gem Hunter 3D |
+| JDK | 25.0.3+ | Сборка модов |
+| Minecraft + Fabric Loader | 26.1.2 + 0.19.2 | Моды |
+</details>
 
-| Компонент | Требование |
-|-----------|------------|
-| ОС | Windows 10+ |
-| Python | 3.11+ (для Python-игр и лаунчера) |
-| Pygame | 2.6+ |
-| C++ | MinGW g++ (для 3D Maze) |
-| CMake | 3.15+ (для 3D Maze) |
-| Minecraft | 26.1.2 (для модов) |
-| JDK | 25.0.3+ (для сборки модов) |
-| Fabric Loader | 0.19.2 |
+---
 
-## 📄 Лицензия
+## Структура
 
-Все проекты в этом репозитории распространяются под лицензией MIT, если не указано иное.
+```
+keeeensy-game-studio/
+├── gem_hunter/           Gem Hunter 2D — Python + Pygame
+├── 3d_maze/              Gem Hunter 3D — C++17 + raylib
+├── zombie_survival/      Zombie Survival — Python + Pygame
+├── rpg_levels_mod/       мод RPG Levels — Java + Fabric
+├── death_marker_mod/     мод Death Marker — Java + Fabric
+├── minecraft_profiles/   профили модов Minecraft — PowerShell
+├── launcher.pyw          единый лаунчер — Python + tkinter
+├── launcher.bat          запуск лаунчера
+└── minecraft_*.bat       быстрый запуск профилей Minecraft
+```
+
+---
+
+## Автор
+
+**Keeeensy** — начинающий сисадмин и разработчик игр.
+Сайт-портфолио: [keeeensy.github.io](https://keeeensy.github.io/)
+
+## Лицензия
+
+Все проекты распространяются под лицензией MIT, если в папке проекта не указано иное.

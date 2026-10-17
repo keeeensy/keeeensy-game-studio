@@ -25,6 +25,8 @@ build/
 !death_marker_mod/build/libs/*.jar
 !rpg_levels_mod/build/libs/*.jar
 *.jar
+# Gradle wrapper нужен для сборки модов из свежего клона
+!**/gradle/wrapper/gradle-wrapper.jar
 
 # Minecraft
 minecraft_profiles/shared/*.jar
