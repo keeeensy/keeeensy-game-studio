@@ -11,8 +11,9 @@
   --ok: #4ade80;
   --warn: #fbbf24;
   --err: #f87171;
-  --surface: rgba(22, 22, 34, 0.72);
-  --surface-hover: rgba(30, 28, 46, 0.82);
+  --surface: rgba(22, 22, 34, 0.5);
+  --surface-hover: rgba(34, 30, 52, 0.62);
+  --glass: blur(18px) saturate(150%);
   --line: rgba(255, 255, 255, 0.08);
   --line-strong: rgba(255, 255, 255, 0.14);
   --ease: cubic-bezier(0.23, 1, 0.32, 1);
@@ -53,11 +54,12 @@ button {
   mask: var(--ic) center / contain no-repeat;
 }
 
-/* ===== Фон: пятна света и неподвижные звёзды ===== */
+/* ===== Фон: пятна света, плавающие сферы и звёзды ===== */
 .bg {
   position: fixed;
   inset: 0;
   z-index: -1;
+  overflow: hidden;
   background:
     radial-gradient(ellipse 55% 70% at 8% 12%, rgba(120, 80, 255, 0.24) 0%, transparent 70%),
     radial-gradient(ellipse 50% 60% at 96% 100%, rgba(255, 107, 53, 0.16) 0%, transparent 70%),
@@ -80,6 +82,66 @@ button {
     radial-gradient(1px 1px at 18% 97%, #fff 50%, transparent 100%),
     radial-gradient(1.3px 1.3px at 48% 98%, #fff 50%, transparent 100%),
     radial-gradient(1px 1px at 84% 97%, #fff 50%, transparent 100%);
+}
+/* Второй слой звёзд мягко мерцает */
+.bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(1.3px 1.3px at 24% 4%, #fff 50%, transparent 100%),
+    radial-gradient(1.1px 1.1px at 44% 14%, #fff 50%, transparent 100%),
+    radial-gradient(1.4px 1.4px at 68% 3%, #fff 50%, transparent 100%),
+    radial-gradient(1px 1px at 88% 8%, #fff 50%, transparent 100%),
+    radial-gradient(1.2px 1.2px at 99% 44%, #fff 50%, transparent 100%),
+    radial-gradient(1.1px 1.1px at 1% 50%, #fff 50%, transparent 100%),
+    radial-gradient(1.3px 1.3px at 9% 99%, #fff 50%, transparent 100%),
+    radial-gradient(1px 1px at 66% 99%, #fff 50%, transparent 100%);
+  animation: twinkle 5s ease-in-out infinite alternate;
+}
+@keyframes twinkle {
+  from { opacity: 0.15; }
+  to { opacity: 0.7; }
+}
+
+/* Размытые сферы медленно плавают — стекло карточек их размывает */
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(70px);
+  will-change: transform;
+}
+.orb-1 {
+  width: 420px; height: 420px;
+  left: -80px; top: -120px;
+  background: rgba(124, 92, 255, 0.42);
+  animation: drift1 22s ease-in-out infinite;
+}
+.orb-2 {
+  width: 380px; height: 380px;
+  right: -90px; bottom: -140px;
+  background: rgba(255, 107, 53, 0.3);
+  animation: drift2 26s ease-in-out infinite;
+}
+.orb-3 {
+  width: 300px; height: 300px;
+  left: 46%; top: 32%;
+  background: rgba(0, 190, 255, 0.14);
+  animation: drift3 19s ease-in-out infinite;
+}
+@keyframes drift1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(140px, 90px) scale(1.12); }
+  66% { transform: translate(40px, 200px) scale(0.92); }
+}
+@keyframes drift2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  40% { transform: translate(-180px, -110px) scale(1.15); }
+  70% { transform: translate(-60px, -220px) scale(0.9); }
+}
+@keyframes drift3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-160px, 120px) scale(1.25); }
 }
 
 /* ===== Шапка ===== */
@@ -168,13 +230,22 @@ button {
   border-radius: 16px;
   background: var(--surface);
   border: 1px solid var(--line);
+  backdrop-filter: var(--glass);
   transition:
     background 0.25s var(--ease),
     border-color 0.25s var(--ease),
     box-shadow 0.3s var(--ease),
     transform 0.25s var(--ease);
 }
-.tile:hover { background: var(--surface-hover); border-color: rgba(167, 139, 250, 0.3); }
+.tile:hover {
+  background: var(--surface-hover);
+  border-color: rgba(167, 139, 250, 0.3);
+  transform: translateX(3px);
+}
+.tile:hover .tile-icon {
+  transform: scale(1.07) rotate(-3deg);
+  box-shadow: 0 6px 18px rgba(124, 92, 255, 0.35);
+}
 .tile:active { transform: scale(0.985); }
 .tile.selected {
   background:
@@ -195,7 +266,11 @@ button {
   color: var(--violet-l);
   background: linear-gradient(135deg, rgba(120, 80, 255, 0.2), rgba(255, 107, 53, 0.12));
   border: 1px solid rgba(167, 139, 250, 0.2);
-  transition: color 0.25s var(--ease), border-color 0.25s var(--ease);
+  transition:
+    color 0.25s var(--ease),
+    border-color 0.25s var(--ease),
+    transform 0.35s var(--ease),
+    box-shadow 0.35s var(--ease);
 }
 .tile.selected .tile-icon { border-color: rgba(167, 139, 250, 0.4); }
 .profiles .tile-icon { width: 40px; height: 40px; border-radius: 11px; font-size: 20px; }
@@ -252,7 +327,8 @@ button {
   gap: 12px;
   padding: 12px 16px;
   border-radius: 14px;
-  background: rgba(24, 24, 36, 0.96);
+  background: rgba(24, 24, 36, 0.7);
+  backdrop-filter: blur(22px) saturate(160%);
   border: 1px solid var(--line-strong);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
   opacity: 0;
@@ -292,7 +368,8 @@ kbd {
 .panel {
   min-height: 0;
   border-radius: 22px;
-  background: rgba(18, 18, 28, 0.62);
+  background: rgba(18, 18, 28, 0.42);
+  backdrop-filter: blur(26px) saturate(150%);
   border: 1px solid var(--line);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
   padding: 32px 32px 28px;
@@ -301,9 +378,15 @@ kbd {
   height: 100%;
   display: flex;
   flex-direction: column;
-  transition: opacity 0.18s var(--ease), transform 0.25s var(--ease);
+  transition: opacity 0.18s var(--ease), transform 0.25s var(--ease), filter 0.18s var(--ease);
 }
-.detail.leaving { opacity: 0; transform: translateY(6px); }
+.detail.leaving { opacity: 0; transform: translateY(6px); filter: blur(4px); }
+/* Новое описание: блоки поднимаются из размытия по очереди */
+.detail.enter > * { animation: rise 0.5s var(--ease) backwards; animation-delay: calc(var(--d, 0) * 45ms); }
+@keyframes rise {
+  from { opacity: 0; transform: translateY(10px); filter: blur(6px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
 
 .hero { display: flex; align-items: center; gap: 24px; }
 .hero-icon {
@@ -317,6 +400,12 @@ kbd {
   background: linear-gradient(135deg, rgba(120, 80, 255, 0.26), rgba(255, 107, 53, 0.16));
   border: 1px solid rgba(167, 139, 250, 0.3);
   box-shadow: 0 12px 36px rgba(80, 50, 200, 0.25);
+  animation: float 6s ease-in-out infinite;
+}
+/* Иконка в описании мягко «дышит» */
+@keyframes float {
+  0%, 100% { transform: translateY(0); box-shadow: 0 12px 36px rgba(80, 50, 200, 0.25); }
+  50% { transform: translateY(-5px); box-shadow: 0 18px 44px rgba(80, 50, 200, 0.38); }
 }
 .hero h1 {
   font-family: var(--font-display);
@@ -416,7 +505,23 @@ kbd {
   background: linear-gradient(135deg, #7c5cff 0%, #b45cc8 50%, #ff6b35 100%);
   box-shadow: 0 8px 24px rgba(124, 92, 255, 0.3);
 }
+/* Блик пробегает по главной кнопке при наведении */
+.btn.primary { position: relative; overflow: hidden; }
+.btn.primary::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -60%;
+  width: 45%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  transform: skewX(-20deg);
+  transition: left 0.7s var(--ease);
+  pointer-events: none;
+}
+.btn.primary:hover::after { left: 120%; }
 .btn.primary:hover { filter: brightness(1.1); box-shadow: 0 10px 32px rgba(124, 92, 255, 0.45); }
+.btn.primary:disabled::after { display: none; }
 .btn.primary:disabled {
   cursor: not-allowed;
   filter: none;
@@ -426,6 +531,18 @@ kbd {
   box-shadow: none;
   transform: none;
 }
+
+/* ===== Появление при запуске ===== */
+body:not(.ready) .titlebar,
+body:not(.ready) .section-label,
+body:not(.ready) .tile,
+body:not(.ready) .panel,
+body:not(.ready) .keys { opacity: 0; }
+body.ready .titlebar { animation: rise 0.6s var(--ease) backwards; }
+body.ready .section-label,
+body.ready .tile { animation: rise 0.6s var(--ease) backwards; animation-delay: calc(80ms + var(--i, 0) * 50ms); }
+body.ready .panel { animation: rise 0.7s var(--ease) backwards; animation-delay: 160ms; }
+body.ready .keys { animation: rise 0.6s var(--ease) backwards; animation-delay: 520ms; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }

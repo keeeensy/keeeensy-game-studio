@@ -90,12 +90,15 @@ function renderDetail({ animate = false } = {}) {
     box.querySelectorAll('[data-act]').forEach((b) => b.addEventListener('click', () => action(b.dataset.act)));
   };
   if (!animate) return paint();
-  // Плавная смена: исчезает → меняется содержимое → появляется
+  // Плавная смена: старое растворяется, новые блоки поднимаются по очереди
   box.classList.add('leaving');
   setTimeout(() => {
     paint();
-    requestAnimationFrame(() => box.classList.remove('leaving'));
-  }, 140);
+    [...box.children].forEach((el, n) => el.style.setProperty('--d', n));
+    box.classList.remove('leaving', 'enter');
+    void box.offsetWidth; // перезапуск CSS-анимации
+    box.classList.add('enter');
+  }, 160);
 }
 
 function select(i) {
@@ -178,5 +181,8 @@ window.addEventListener('pywebviewready', async () => {
   renderTiles();
   renderDetail();
   bindUi();
+  // Каскад появления: подписи разделов и плитки по очереди
+  document.querySelectorAll('.section-label, .tile').forEach((el, n) => el.style.setProperty('--i', n));
+  requestAnimationFrame(() => document.body.classList.add('ready'));
   setInterval(refresh, 1000);
 });
