@@ -4,6 +4,7 @@
 assets/launcher/ui. Этот файл — логика: статусы сборки, запуск процессов,
 отслеживание падений и логи. JS вызывает методы класса Api.
 """
+import ctypes
 import os
 import subprocess
 import sys
@@ -227,17 +228,30 @@ class Api:
         self._window.destroy()
 
 
-def set_window_icon(window):
-    """У pywebview на Windows нет параметра иконки — ставим через WinForms."""
+def set_window_icon(title):
+    """Иконка окна и панели задач. У pywebview на Windows нет такого параметра,
+    поэтому через WinAPI: WM_SETICON работает из любого потока."""
     try:
-        import clr  # noqa: F401  (pythonnet, ставится вместе с pywebview)
-        from System.Drawing import Icon
-        window.native.Icon = Icon(os.path.join(ASSETS, "icon.ico"))
+        user32 = ctypes.windll.user32
+        user32.LoadImageW.restype = ctypes.c_void_p
+        user32.SendMessageW.argtypes = [ctypes.c_void_p, ctypes.c_uint, ctypes.c_void_p, ctypes.c_void_p]
+        hwnd = user32.FindWindowW(None, title)
+        path = os.path.join(ASSETS, "icon.ico")
+        for kind, metric in ((1, 11), (0, 49)):  # ICON_BIG / SM_CXICON, ICON_SMALL / SM_CXSMICON
+            size = user32.GetSystemMetrics(metric)
+            hicon = user32.LoadImageW(None, path, 1, size, size, 0x10)  # IMAGE_ICON, LR_LOADFROMFILE
+            if hwnd and hicon:
+                user32.SendMessageW(hwnd, 0x80, kind, hicon)  # WM_SETICON
     except Exception:
         pass
 
 
 def main():
+    # Своё имя приложения для Windows — иначе в панели задач будет значок Python
+    try:
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("keeeensy.launcher")
+    except Exception:
+        pass
     api = Api()
     window = webview.create_window(
         "Keeeensy Launcher", os.path.join(ASSETS, "ui", "index.html"), js_api=api,
@@ -247,7 +261,7 @@ def main():
         background_color="#0b0b12",
     )
     api._window = window
-    window.events.shown += lambda: set_window_icon(window)
+    window.events.shown += lambda: set_window_icon(window.title)
     webview.start(http_server=True)
 
 

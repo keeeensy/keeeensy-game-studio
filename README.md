@@ -180,6 +180,12 @@ pip install pywebview
 launcher.bat
 ```
 
+Ярлык «Keeeensy Launcher» с иконкой на рабочем столе:
+
+```powershell
+.\create_shortcut.ps1
+```
+
 ### Minecraft Profiles — [`minecraft_profiles/`](minecraft_profiles/)
 
 PowerShell-скрипт, который перед запуском Minecraft подставляет нужный набор модов в `.minecraft/mods`, запускает игру и после выхода возвращает исходные моды на место.
